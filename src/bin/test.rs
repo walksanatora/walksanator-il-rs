@@ -35,9 +35,9 @@ fn main() -> std::io::Result<()> {
 		.open("btree.bin").unwrap();
 	
 	//write the btree to a file
-	//throw errors into the abyss
-	match btree_file.write_all(&tree_bytes.into_boxed_slice()) {_ => {}};
-	match btree_file.flush() {_=>{}};
+	//drop the errors into the abyss
+	drop(btree_file.write_all(&tree_bytes.into_boxed_slice()));
+	drop(btree_file.flush());
 	drop(btree_file);
 
 	let mut encoded_file = fs::OpenOptions::new()
@@ -46,9 +46,9 @@ fn main() -> std::io::Result<()> {
 		.open("encoded.bin").unwrap();
 
 	//write the encoded data to a file
-	//throw errors into the abyss
-	match encoded_file.write_all(&encoded_bytes.into_boxed_slice()) {_ => {}};
-	match encoded_file.flush() {_=>{}};
+	//drop the errors into the abyss
+	drop(encoded_file.write_all(&encoded_bytes.into_boxed_slice()));
+	drop(encoded_file.flush());
 	drop(encoded_file);
 
 	let decoded = huffman::decode_values(encoded_bits, &reconstructed_tree);
