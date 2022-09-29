@@ -23,10 +23,8 @@ fn main() -> std::io::Result<()> {
 	huffman::node_into_bitvec(&tree, &mut tree_bits);
 	let encoded_bits = huffman::encode_values(&tokens, &paths);
 	//println!("{:?}",bits);
-	println!("{:?}",tree_bits);
 	let tree_bytes = tree_bits.clone().into_vec();
 	let reconstructed_tree = huffman::node_from_bitvec(&mut tree_bits);
-	println!("{:?}",reconstructed_tree);
 	let encoded_bytes = encoded_bits.clone().into_vec();
 	
 	let mut btree_file = fs::OpenOptions::new()
@@ -36,8 +34,8 @@ fn main() -> std::io::Result<()> {
 	
 	//write the btree to a file
 	//throw errors into the abyss
-	match btree_file.write_all(&tree_bytes.into_boxed_slice()) {_ => {}};
-	match btree_file.flush() {_=>{}};
+	drop(btree_file.write_all(&tree_bytes.into_boxed_slice()));
+	drop(btree_file.flush());
 	drop(btree_file);
 
 	let mut encoded_file = fs::OpenOptions::new()
@@ -47,8 +45,8 @@ fn main() -> std::io::Result<()> {
 
 	//write the encoded data to a file
 	//throw errors into the abyss
-	match encoded_file.write_all(&encoded_bytes.into_boxed_slice()) {_ => {}};
-	match encoded_file.flush() {_=>{}};
+	drop(encoded_file.write_all(&encoded_bytes.into_boxed_slice()));
+	drop(encoded_file.flush());
 	drop(encoded_file);
 
 	let decoded = huffman::decode_values(encoded_bits, &reconstructed_tree);

@@ -121,7 +121,6 @@ impl BitHelp for BitVec<u8> {
 	}
 
 	fn write_number(&mut self,num: usize) {
-		println!("write number {}",num);
 		//determine whether we are fitting in 8,16,32,64 bits
 		if num <= 255 {
 			//write a 8-bit number
@@ -151,11 +150,9 @@ impl BitHelp for BitVec<u8> {
 	}
 
 	fn write_string(&mut self,string: String) {
-		println!("write string {}",string);
 		let bytes = string.into_bytes();
 		self.write_number(bytes.len());
 		for char in bytes {
-			println!("write byte {}", char);
 			let mut num_bit_vec = char.as_u8().view_bits::<Lsb0>().to_bitvec();
 			self.append(&mut num_bit_vec);
 		}
@@ -177,7 +174,6 @@ impl BitHelp for BitVec<u8> {
 			3 => 64,
 			_ => unreachable!("two bits cannot be greater then 3")
 		};
-		println!("len: {}",len);
 		self.drain(..len+2)
 		.skip(2)
 		.rfold(0, |acc,elem| (acc << 1) | usize::from(elem))
@@ -228,7 +224,6 @@ impl Node {
 		};
 
 		if v != "".to_string() {
-			println!("match! {:?} {}",value,v);
 			return v
 		}
 
