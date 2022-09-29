@@ -1,0 +1,17 @@
+IF OP 0 VAR std #only load if std is unset
+	IMPORT std
+ES
+CALL print STR "Hello World!" #writes Hello World!
+
+#this is a function which takes a string to output and a number of times to output it
+DEF print_times STR str times
+	LBL lp
+	CALLN print VAR str
+	MATH 1 times 1
+	IF OP 0 OP 2 times 0
+		GOTO STR lp
+	ES
+ES
+#print the string 10 times
+CALL print_times "Hello World!" 10
+EOF
