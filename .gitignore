@@ -1,1 +1,4 @@
 /target
+btree.bin
+encoded.bin
+Cargo.lock
