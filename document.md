@@ -109,11 +109,11 @@ ES
 
 main.ils
 ```
-IMPORT STR "module" #or IMPORT STR "module.ils" same diffrence
-IMPORT STR "moduel" STR "duel" #import moduel under the name duel
+IMPORT "module" #or IMPORT "module.ils" same diffrence
+IMPORT "moduel" "duel" #import moduel under the name duel
 
-CALLN STR "print" CALL module.hello 
-CALLN STR "print" CALL duel.time
+CALLN "print" CALL module.hello 
+CALLN "print" CALL duel.time
 
 EOF
 ```
@@ -121,7 +121,7 @@ module.ils
 ```
 CDEF module
 	DEF hello
-		RETURN STR "HELLO WORLD!" 
+		RETURN "HELLO WORLD!" 
 	ES
 ES
 RETURN module
@@ -131,7 +131,7 @@ moduel.ils
 ```
 CDEF module
 	DEF time
-		RETURN STR "TIME TO DUEL!!!"
+		RETURN "TIME TO DUEL!!!"
 	ES
 ES
 RETURN module
