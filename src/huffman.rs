@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![allow(clippy::upper_case_acronyms,clippy::inherent_to_string)]
 
 use bitvec::{prelude::*, macros::internal::funty::Fundamental};
 
@@ -82,7 +81,8 @@ impl Keywords {
 			Keywords::LBL => { "LBL" }
 			Keywords::GOTO => { "GOTO" }
 			Keywords::MATH => { "MATH" }
-			Keywords::IMPORT => { "IMPORT" }
+			Keywords::IMPORT => { "IMPORT" }			
+			_ => { "INVALID" }
 		}.to_string()
 	}
 }
@@ -163,7 +163,7 @@ impl BitHelp for BitVec<u8> {
 
 	//read
 	fn read_bit(&mut self) -> bool {
-		self.pop().unwrap()
+		self.remove(0)
 	}
 
 	
@@ -199,8 +199,8 @@ impl BitHelp for BitVec<u8> {
 }
 
 impl Node {
-	//! the most basic functions for searching and accessing data in this tree
-	fn search(&self,value: &Value,path: &str) -> String {
+	//! the most basic functions for searching and accessing data in this tree	
+	fn search(&self,value: &Value,path: &String) -> String {
 		//! searches through the huffman tree for a value
 		 
 		//println!("value: {:?}, {}, s: {:?}",value,path,self);
@@ -209,27 +209,27 @@ impl Node {
 			Value::Keyword(kw) => {
 				match self.value.clone() {
 					Value::Keyword(k) =>{
-						if &k == kw {path}
-						else {""}
+						if &k == kw {path.clone()}
+						else {"".to_string()}
 					}
-					_ => {""}
+					_ => {"".to_string()}
 				}
 			},
 			Value::Str(str) => { 
 				match self.value.clone() {
 					Value::Str(s) =>{ 
-						if &s == str {path}
-						else {""}
+						if &s == str {path.clone()}
+						else {"".to_string()}
 					}
-					_ => {""}
+					_ => {"".to_string()}
 				}
 			},
-			Value::None => {""}
+			Value::None => {"".to_string()}
 		};
 
-		if !v.is_empty() {
+		if v != "".to_string() {
 			println!("match! {:?} {}",value,v);
-			return v.to_string()
+			return v
 		}
 
 		// check if this node has other nodes below it, if it does check those for the value
@@ -238,14 +238,14 @@ impl Node {
 			let lc = self.left_node
 				.as_ref()
 				.expect("left_node is *somehow* None despite being a leaf node")
-				.search(value,&(path.to_string() + "0"));
+				.search(&value,&(path.clone() + "0"));
 			// check if we found it
-			if lc.is_empty() {
+			if lc == "".to_string() {
 				//we did not find it down the left path, check the right
 				let rc = self.left_node
 					.as_ref()
 					.expect("right_node is *somehow* None despite being a leaf node")
-					.search(value,&(path.to_string() + "1"));
+					.search(value,&(path.clone() + "1"));
 				//return the right check, it will either be "" or our path
 				return rc 
 			} else {
@@ -254,13 +254,13 @@ impl Node {
 			}
 		}
 		//this node is not a leaf and the values do not match
-		"".to_string()
+		return "".to_string()
 	}
 
 	fn resolve(&self,path: &String) -> Value {
 		//! gets a value out of the huffman tree,
 		let is_leaf = self.is_leaf_node();
-		if path.is_empty() {
+		if path.len() == 0 {
 			if is_leaf {
 				return Value::None
 			} else {
@@ -282,7 +282,7 @@ impl Node {
 					.resolve(&path_clone)
 			}
 		}
-		Value::None
+		return Value::None
 	}
 
 	fn is_leaf_node(&self) -> bool {
@@ -303,11 +303,11 @@ pub fn node_into_bitvec(node: &Node,bitvec: &mut BitVec<u8>) {
 	if node.is_leaf_node() {
 		bitvec.write_bit(false);
 		node_into_bitvec(
-			node.left_node.as_ref().unwrap(),
+			&node.left_node.as_ref().unwrap(),
 			bitvec
 		);
 		node_into_bitvec(
-			node.right_node.as_ref().unwrap(),
+			&node.right_node.as_ref().unwrap(),
 			bitvec
 		)
 	} else {
@@ -330,7 +330,6 @@ pub fn node_into_bitvec(node: &Node,bitvec: &mut BitVec<u8>) {
 
 pub fn node_from_bitvec(bitvec: &mut BitVec<u8>) -> Node {
 	//! decodes a node tree from a bitvec
-	bitvec.reverse();
 	if bitvec.read_bit() {
 		let v: Value = if bitvec.read_bit() {
 			Value::Str(bitvec.read_string())
@@ -338,7 +337,7 @@ pub fn node_from_bitvec(bitvec: &mut BitVec<u8>) -> Node {
 			Value::Keyword(Keywords::from_usize(bitvec.read_number()))
 		};
 		
-		Node {
+		return Node {
 			value: v,
 			left_node: None,
 			right_node: None,
@@ -405,7 +404,7 @@ pub fn generate_tree(counts: &BTreeMap<Value,usize>) -> Node {
 				value: val.clone(),
 				left_node: None,
 				right_node: None,
-				weight: count.to_owned()
+				weight: count.clone()
 			}
 		)
 	}
@@ -419,9 +418,9 @@ pub fn generate_tree(counts: &BTreeMap<Value,usize>) -> Node {
 
 		//take the lowest 2 nodes out of the Vec
 		let left = nodes.remove(0);
-		let lw = left.weight; //get the left weight
+		let lw = left.weight.clone(); //get the left weight
 		let right = nodes.remove(0);
-		let rw = right.weight; //get the right weight
+		let rw = right.weight.clone(); //get the right weight
 		
 		#[cfg(debug_assertions)]
 		println!("merging {:?} and {:?}",left,right);
@@ -448,8 +447,8 @@ pub fn get_paths(tree: &Node) -> BTreeMap<Value,String> {
 
 fn get_paths_recursive(tree: &Node, map: &mut BTreeMap<Value,String>,pth: String) {
 	if tree.is_leaf_node() {
-		get_paths_recursive(tree.left_node.as_ref().unwrap(),map,pth.clone() + "0");
-		get_paths_recursive(tree.right_node.as_ref().unwrap(),map,pth + "1");
+		get_paths_recursive(&tree.left_node.as_ref().unwrap(),map,pth.clone() + "0");
+		get_paths_recursive(&tree.right_node.as_ref().unwrap(),map,pth + "1");
 	} else {
 		map.insert(tree.value.clone(), pth);
 	}
@@ -471,14 +470,13 @@ pub fn encode_values(values: &Vec<Value>,paths: &BTreeMap<Value,String>) -> BitV
 			}
 		}
 	};
-	output
+	return output
 }
 
 pub fn decode_values(mut bitvec: BitVec<u8>,tree: &Node) -> Vec<Value> {
-	bitvec.reverse();
 	let mut buf = "".to_string();
 	let mut output: Vec<Value> = Vec::new();
-	while !bitvec.is_empty() {
+	while bitvec.len() > 0 {
 		if bitvec.read_bit() {
 			buf += "1"
 		} else { buf += "0" }
@@ -493,7 +491,7 @@ pub fn decode_values(mut bitvec: BitVec<u8>,tree: &Node) -> Vec<Value> {
 
 #[cfg(test)]
 mod test {
-	#![allow(clippy::assertions_on_constants)]
+
 	use bitvec::prelude::*;
 
 	use crate::huffman::Keywords;
@@ -521,7 +519,7 @@ mod test {
 		println!("num: {}",num);
 		println!("string: {}", string);
 
-		assert!(bit);
+		assert_eq!(bit,true);
 		assert_eq!(num,100);
 		assert_eq!("ohno".to_string(),string);
 	}

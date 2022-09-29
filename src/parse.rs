@@ -1,11 +1,10 @@
-#![allow(dead_code)]
 
-pub fn parse(string: &str) -> Vec<String> {
+pub fn parse(string: &String) -> Vec<String> {
 	let mut output = vec![];
-	for line in string.split('\n') {
+	for line in string.split("\n") {
 		let mut flag_comment = false;
 		for word in shlex::split(line).unwrap() {
-			if ! word.starts_with('#') && ! flag_comment {
+			if ! word.starts_with("#") && ! flag_comment {
 				output.push(word)
 			} else {flag_comment = true}
 		}
@@ -37,7 +36,7 @@ pub fn combine(words: Vec<String>) -> String {
 	//remove blank lines
 	let mut output = Vec::new();
 	for line in lines {
-		if !line.is_empty() {
+		if line != "" {
 			output.push(line);
 		}
 	}
@@ -59,7 +58,7 @@ mod test {
 	}
 	#[test]
 	fn parsing() {
-		let p = parse(EXAMPLE_SCRIPT);
+		let p = parse(&EXAMPLE_SCRIPT.to_string());
 		let mut string_parsed = vec![];
 		for w in EXAMPLE_PARSED.into_iter() {
 			string_parsed.push(w.to_string())
