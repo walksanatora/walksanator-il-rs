@@ -5,6 +5,7 @@ use bitvec::{prelude::*, macros::internal::funty::Fundamental};
 use std::{fmt, collections::BTreeMap};
 
 /// Keywords in my languague
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug,Eq,PartialEq,Clone,Hash,Ord,PartialOrd)]
 pub enum Keywords{
 	INVALID, // DO NOT USE, literally exist to say "INVALID internal keyword"
@@ -65,9 +66,9 @@ impl Keywords {
 			_ => { Keywords::INVALID }
 		}
 	}
+	#[allow(clippy::inherent_to_string)]
 	fn to_string(&self) -> String {
 		match self {
-			Keywords::INVALID => { "INVALID" }
 			Keywords::CALL => { "CALL" }
 			Keywords::CALLN => { "CALLN" }
 			Keywords::STR => { "STR" }
@@ -195,8 +196,8 @@ impl BitHelp for BitVec<u8> {
 }
 
 impl Node {
-	//! the most basic functions for searching and accessing data in this tree	
-	fn search(&self,value: &Value,path: &String) -> String {
+	//! the most basic functions for searching and accessing data in this tree
+	fn search(&self,value: &Value,path: &str) -> String {
 		//! searches through the huffman tree for a value
 		 
 		//println!("value: {:?}, {}, s: {:?}",value,path,self);
@@ -205,26 +206,26 @@ impl Node {
 			Value::Keyword(kw) => {
 				match self.value.clone() {
 					Value::Keyword(k) =>{
-						if &k == kw {path.clone()}
-						else {"".to_string()}
+						if &k == kw {path}
+						else {""}
 					}
-					_ => {"".to_string()}
+					_ => {""}
 				}
 			},
 			Value::Str(str) => { 
 				match self.value.clone() {
 					Value::Str(s) =>{ 
-						if &s == str {path.clone()}
-						else {"".to_string()}
+						if &s == str {path}
+						else {""}
 					}
-					_ => {"".to_string()}
+					_ => {""}
 				}
 			},
-			Value::None => {"".to_string()}
+			Value::None => {""}
 		};
 
-		if v != "".to_string() {
-			return v
+		if !v.is_empty() {
+			return v.to_string()
 		}
 
 		// check if this node has other nodes below it, if it does check those for the value
@@ -233,14 +234,14 @@ impl Node {
 			let lc = self.left_node
 				.as_ref()
 				.expect("left_node is *somehow* None despite being a leaf node")
-				.search(&value,&(path.clone() + "0"));
+				.search(value,&(path.to_string() + "0"));
 			// check if we found it
-			if lc == "".to_string() {
+			if lc.is_empty() {
 				//we did not find it down the left path, check the right
 				let rc = self.left_node
 					.as_ref()
 					.expect("right_node is *somehow* None despite being a leaf node")
-					.search(value,&(path.clone() + "1"));
+					.search(value,&(path.to_string() + "1"));
 				//return the right check, it will either be "" or our path
 				return rc 
 			} else {
@@ -249,13 +250,13 @@ impl Node {
 			}
 		}
 		//this node is not a leaf and the values do not match
-		return "".to_string()
+		"".to_string()
 	}
 
 	fn resolve(&self,path: &String) -> Value {
 		//! gets a value out of the huffman tree,
 		let is_leaf = self.is_leaf_node();
-		if path.len() == 0 {
+		if path.is_empty() {
 			if is_leaf {
 				return Value::None
 			} else {
@@ -277,7 +278,7 @@ impl Node {
 					.resolve(&path_clone)
 			}
 		}
-		return Value::None
+		Value::None
 	}
 
 	fn is_leaf_node(&self) -> bool {
@@ -298,11 +299,11 @@ pub fn node_into_bitvec(node: &Node,bitvec: &mut BitVec<u8>) {
 	if node.is_leaf_node() {
 		bitvec.write_bit(false);
 		node_into_bitvec(
-			&node.left_node.as_ref().unwrap(),
+			node.left_node.as_ref().unwrap(),
 			bitvec
 		);
 		node_into_bitvec(
-			&node.right_node.as_ref().unwrap(),
+			node.right_node.as_ref().unwrap(),
 			bitvec
 		)
 	} else {
@@ -332,7 +333,7 @@ pub fn node_from_bitvec(bitvec: &mut BitVec<u8>) -> Node {
 			Value::Keyword(Keywords::from_usize(bitvec.read_number()))
 		};
 		
-		return Node {
+		Node {
 			value: v,
 			left_node: None,
 			right_node: None,
@@ -399,7 +400,7 @@ pub fn generate_tree(counts: &BTreeMap<Value,usize>) -> Node {
 				value: val.clone(),
 				left_node: None,
 				right_node: None,
-				weight: count.clone()
+				weight: *count
 			}
 		)
 	}
@@ -413,9 +414,9 @@ pub fn generate_tree(counts: &BTreeMap<Value,usize>) -> Node {
 
 		//take the lowest 2 nodes out of the Vec
 		let left = nodes.remove(0);
-		let lw = left.weight.clone(); //get the left weight
+		let lw = left.weight; //get the left weight
 		let right = nodes.remove(0);
-		let rw = right.weight.clone(); //get the right weight
+		let rw = right.weight; //get the right weight
 		
 		#[cfg(debug_assertions)]
 		println!("merging {:?} and {:?}",left,right);
@@ -442,8 +443,8 @@ pub fn get_paths(tree: &Node) -> BTreeMap<Value,String> {
 
 fn get_paths_recursive(tree: &Node, map: &mut BTreeMap<Value,String>,pth: String) {
 	if tree.is_leaf_node() {
-		get_paths_recursive(&tree.left_node.as_ref().unwrap(),map,pth.clone() + "0");
-		get_paths_recursive(&tree.right_node.as_ref().unwrap(),map,pth + "1");
+		get_paths_recursive(tree.left_node.as_ref().unwrap(),map,pth.clone() + "0");
+		get_paths_recursive(tree.right_node.as_ref().unwrap(),map,pth + "1");
 	} else {
 		map.insert(tree.value.clone(), pth);
 	}
@@ -465,13 +466,13 @@ pub fn encode_values(values: &Vec<Value>,paths: &BTreeMap<Value,String>) -> BitV
 			}
 		}
 	};
-	return output
+	output
 }
 
 pub fn decode_values(mut bitvec: BitVec<u8>,tree: &Node) -> Vec<Value> {
 	let mut buf = "".to_string();
 	let mut output: Vec<Value> = Vec::new();
-	while bitvec.len() > 0 {
+	while !bitvec.is_empty() {
 		if bitvec.read_bit() {
 			buf += "1"
 		} else { buf += "0" }
@@ -514,12 +515,13 @@ mod test {
 		println!("num: {}",num);
 		println!("string: {}", string);
 
-		assert_eq!(bit,true);
+		assert!(bit);
 		assert_eq!(num,100);
 		assert_eq!("ohno".to_string(),string);
 	}
 
 	//#[test]
+	#[allow(clippy::assertions_on_constants)]
 	fn keys() {
 		println!("{:?}",Keywords::CALL as usize);
 		assert!(false);
