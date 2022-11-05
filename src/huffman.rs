@@ -105,6 +105,27 @@ pub struct Node {
 	weight: usize
 }
 
+
+struct DirectionBitVec {
+	_bv: BitVec<u8,Lsb0>,
+	_dir: bool// false means write, true means read
+}
+
+impl DirectionBitVec {
+	fn new() -> DirectionBitVec {
+		DirectionBitVec {
+			_bv: BitVec::new(),
+			_dir: false
+		}
+	}
+	fn confirm_read(&mut self, dir: bool) {
+		if self._dir != dir {
+			self._bv.reverse();
+			self._dir = dir
+		}
+	}
+}
+
 pub trait BitHelp {
 	fn write_bit(&mut self, bit: bool);
 	fn write_number(&mut self,num: usize);
@@ -115,78 +136,84 @@ pub trait BitHelp {
 	fn read_string(&mut self) -> String;
 }
 
-impl BitHelp for BitVec<u8> {
+impl BitHelp for DirectionBitVec {
 	//write
 	fn write_bit(&mut self,bit: bool) {
-		self.push(bit)
+		self.confirm_read(false);
+		self._bv.push(bit)
 	}
 
 	fn write_number(&mut self,num: usize) {
+		self.confirm_read(false);
 		//determine whether we are fitting in 8,16,32,64 bits
 		if num <= 255 {
 			//write a 8-bit number
 			self.write_bit(false);
 			self.write_bit(false);
 			let mut num_bit_vec = num.as_u8().view_bits::<Lsb0>().to_bitvec();
-			self.append(&mut num_bit_vec);
+			self._bv.append(&mut num_bit_vec);
 		} else if num <=65535 {
 			//write a 16 bit number
 			self.write_bit(true);
 			self.write_bit(false);
 			let mut num_bit_vec = num.as_u16().view_bits::<Lsb0>().to_bitvec();
-			self.append(&mut num_bit_vec);
+			self._bv.append(&mut num_bit_vec);
 		} else if num <=4294967295 {
 			//write a 32 bit number
 			self.write_bit(false);
 			self.write_bit(true);
 			let mut num_bit_vec = num.as_u32().view_bits::<Lsb0>().to_bitvec();
-			self.append(&mut num_bit_vec);
+			self._bv.append(&mut num_bit_vec);
 		} else {
 			//write a 64 bit number
 			self.write_bit(true);
 			self.write_bit(true);
 			let mut num_bit_vec = num.as_u64().view_bits::<Lsb0>().to_bitvec();
-			self.append(&mut num_bit_vec);
+			self._bv.append(&mut num_bit_vec);
 		}
 	}
 
 	fn write_string(&mut self,string: String) {
+		self.confirm_read(false);
 		let bytes = string.into_bytes();
 		self.write_number(bytes.len());
 		for char in bytes {
 			let mut num_bit_vec = char.as_u8().view_bits::<Lsb0>().to_bitvec();
-			self.append(&mut num_bit_vec);
+			self._bv.append(&mut num_bit_vec);
 		}
 	}
 
 	//read
 	fn read_bit(&mut self) -> bool {
-		self.remove(0)
+		self.confirm_read(true);
+		self._bv.pop().unwrap()
 	}
 
 	
 	fn read_number(&mut self) -> usize {
-		let len = match self[..2]
+		self.confirm_read(true);
+		let len = match self._bv[..2]
 		.iter()
 		.fold(0, |acc, elem| (acc << 1) | u8::from(*elem)) {
 			0 => 8,
-			1 => 16,
-			2 => 32,
+			1 => 32,
+			2 => 16,
 			3 => 64,
 			_ => unreachable!("two bits cannot be greater then 3")
 		};
-		self.drain(..len+2)
+		self._bv.drain(..len+2)
 		.skip(2)
 		.rfold(0, |acc,elem| (acc << 1) | usize::from(elem))
 	}
 	
 	fn read_string(&mut self) -> String {
+		self.confirm_read(true);
 		let len = self.read_number();
 		let mut bytes = Vec::new();
 		for _ in 0..len {
-			let mut b = BitVec::<u8,Lsb0>::new();
+			let mut b = DirectionBitVec::new();
 			for _ in 0..8 {
-				b.push(self.remove(0))
+				b.write_bit(self._bv.pop().unwrap())
 			}
 			bytes.push(b.load::<u8>())
 		};
@@ -294,7 +321,7 @@ impl fmt::Debug for Node {
     }
 }
 
-pub fn node_into_bitvec(node: &Node,bitvec: &mut BitVec<u8>) {
+pub fn node_into_bitvec(node: &Node,bitvec: &mut DirectionBitVec) {
 	//! encodes a node into a bitvec
 	if node.is_leaf_node() {
 		bitvec.write_bit(false);
@@ -324,7 +351,7 @@ pub fn node_into_bitvec(node: &Node,bitvec: &mut BitVec<u8>) {
 	}
 }
 
-pub fn node_from_bitvec(bitvec: &mut BitVec<u8>) -> Node {
+pub fn node_from_bitvec(bitvec: &mut DirectionBitVec) -> Node {
 	//! decodes a node tree from a bitvec
 	if bitvec.read_bit() {
 		let v: Value = if bitvec.read_bit() {
@@ -450,8 +477,8 @@ fn get_paths_recursive(tree: &Node, map: &mut BTreeMap<Value,String>,pth: String
 	}
 }
 
-pub fn encode_values(values: &Vec<Value>,paths: &BTreeMap<Value,String>) -> BitVec<u8> {
-	let mut output = BitVec::<u8,Lsb0>::new();
+pub fn encode_values(values: &Vec<Value>,paths: &BTreeMap<Value,String>) -> DirectionBitVec {
+	let mut output = DirectionBitVec::new();
 	for value in values {
 		let binary_string = paths.get(value).unwrap();
 		
@@ -469,7 +496,7 @@ pub fn encode_values(values: &Vec<Value>,paths: &BTreeMap<Value,String>) -> BitV
 	output
 }
 
-pub fn decode_values(mut bitvec: BitVec<u8>,tree: &Node) -> Vec<Value> {
+pub fn decode_values(mut bitvec: DirectionBitVec,tree: &Node) -> Vec<Value> {
 	let mut buf = "".to_string();
 	let mut output: Vec<Value> = Vec::new();
 	while !bitvec.is_empty() {
@@ -488,15 +515,16 @@ pub fn decode_values(mut bitvec: BitVec<u8>,tree: &Node) -> Vec<Value> {
 #[cfg(test)]
 mod test {
 
-	use bitvec::prelude::*;
-
 	use crate::huffman::Keywords;
 
-	use super::BitHelp;
+	use bitvec::prelude::*;
+
+	use bitvec::prelude::*;
+	use super::*;
 
 	#[test]
 	fn encode_decode() {
-		let mut bv = BitVec::<u8,Lsb0>::new();
+		let mut bv = DirectionBitVec::new();
 		bv.write_bit(true);
 		bv.write_number(100);
 		bv.write_string("ohno".to_string());
